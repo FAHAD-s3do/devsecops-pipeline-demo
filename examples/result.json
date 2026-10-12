@@ -1,0 +1,10 @@
+{
+  "findings": [],
+  "artifacts": [
+    {
+      "path": "app.py",
+      "sha256": "3fd407c5933a401e5123b99f11b123fa2f528e95e5fc240012a352fe4f8f58ce"
+    }
+  ],
+  "scope": "Explicit source files only; no dependency/CVE/secret scan"
+}

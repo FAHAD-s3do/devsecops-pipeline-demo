@@ -1,0 +1,41 @@
+name: Tests
+on: [push, pull_request, workflow_dispatch]
+permissions:
+  contents: read
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    strategy:
+      matrix:
+        python: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python }}
+      - run: python -m unittest discover -s tests -v
+      - name: Static policy gate and source hashes
+        run: python security_gate.py app.py > gate-report.json
+  container:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803
+        with:
+          persist-credentials: false
+      - run: docker build -t security-demo .
+      - name: Smoke test non-root container
+        shell: bash
+        run: |
+          set -euo pipefail
+          docker run -d --name security-demo --read-only --cap-drop ALL --security-opt no-new-privileges -p 127.0.0.1:8080:8080 security-demo
+          trap 'docker logs security-demo; docker rm -f security-demo' EXIT
+          test "$(docker exec security-demo id -u)" = 65532
+          for attempt in {1..15}; do
+            if curl --fail --silent http://127.0.0.1:8080/health; then exit 0; fi
+            sleep 1
+          done
+          exit 1
