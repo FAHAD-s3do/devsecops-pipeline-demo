@@ -24,11 +24,11 @@ python3 -m unittest discover -s tests -v
 
 ## Scope and limitations
 
-Educational gate only: no alias/dataflow resolution, taint analysis, dependency vulnerability database, image scanner or secret scanner. Dynamic shell expressions can be missed; attribute names may cause false positives. Python http.server is a demo service, not production serving. Docker base tag is mutable; approve and pin a digest before deployment. No deploy/publish credentials or production deployment. Local Python tests and gate are verified; Docker was unavailable locally and GitHub Actions has not yet run. Never describe the unrun container job as validated.
+Educational gate only: no alias/dataflow resolution, taint analysis, dependency vulnerability database, image scanner or secret scanner. Dynamic shell expressions can be missed; attribute names may cause false positives. Python http.server is a demo service, not production serving. Docker base tag is mutable; approve and pin a digest before deployment. No deploy/publish credentials or production deployment. Local Python tests and gate are verified. Docker was unavailable locally; the GitHub Actions container build and non-root smoke test passed after publication.
 
 ## Validation
 
-5 unit tests passed locally on Python 3.12.14. Synthetic CLI examples were executed and results are included under `examples/`. No customer data, historical lab results or production effectiveness is claimed. CI configuration is supplied; remote CI status must be checked after publishing.
+5 unit tests passed locally on Python 3.12.14. Synthetic CLI examples were executed and results are included under `examples/`. No customer data, historical lab results or production effectiveness is claimed. GitHub Actions tests on Python 3.10 and 3.12, the static gate, and the container job [passed](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/38247548910).
 
 ## Files
 
