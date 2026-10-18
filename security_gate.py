@@ -7,6 +7,9 @@ from pathlib import Path
 
 
 def inspect_source(source):
+    # ast.parse accepts bytes and applies Python's encoding-cookie/BOM rules.
+    # Keep the original bytes for hashing; decoding as UTF-8 first rejects valid
+    # source files that declare another encoding.
     tree=ast.parse(source);findings=[]
     for node in ast.walk(tree):
         if not isinstance(node,ast.Call):continue
@@ -25,7 +28,7 @@ def main():
     try:
         for path in args.files:
             source=path.read_bytes()
-            findings.extend(dict(file=str(path),**f) for f in inspect_source(source.decode()))
+            findings.extend(dict(file=str(path),**f) for f in inspect_source(source))
             artifacts.append(dict(path=str(path),sha256=hashlib.sha256(source).hexdigest()))
     except (OSError,SyntaxError,UnicodeError) as exc:p.exit(2,str(exc)+'\n')
     print(json.dumps(dict(findings=findings,artifacts=artifacts,scope='Explicit source files only; no dependency/CVE/secret scan'),indent=2))

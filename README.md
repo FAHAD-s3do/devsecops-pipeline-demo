@@ -19,6 +19,7 @@ python3 -m unittest discover -s tests -v
 - Unit tests exercise the health endpoint and positive/negative policy cases.
 - AST gate flags direct eval/exec calls and literal shell=True calls in explicitly listed files.
 - Gate exits nonzero on findings; JSON includes SHA-256 hashes of checked source artifacts.
+- Parses Python source bytes using Python's encoding-cookie and UTF-8 BOM rules, while hashing the original bytes. Valid non-UTF-8 source is no longer rejected before inspection.
 - CI uses read-only repository permissions, pinned action commits and a Python-version matrix.
 - Docker recipe runs the service with a numeric non-root UID; container job builds and smoke-tests it.
 
@@ -28,7 +29,12 @@ Educational gate only: no alias/dataflow resolution, taint analysis, dependency 
 
 ## Validation
 
-5 unit tests passed locally on Python 3.12.14. Synthetic CLI examples were executed and results are included under `examples/`. No customer data, historical lab results or production effectiveness is claimed. GitHub Actions tests on Python 3.10 and 3.12, the static gate, and the container job [passed](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/38247548910).
+9 unit tests passed locally on Python 3.12.14, including declared Latin-1 encoding, UTF-8 BOM, invalid encodings, exact-byte hashes, and CLI exit codes. Synthetic CLI examples were executed and results are included under `examples/`. No customer data, historical lab results or production effectiveness is claimed. The initial GitHub Actions tests on Python 3.10 and 3.12, static gate, and container job [passed](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/38247548910); check current Actions results for subsequent changes.
+
+The gate exits 0 for inspected files without findings, 1 for policy findings, and
+2 for read/parse/encoding errors. Errors produce a diagnostic on stderr rather
+than a partial JSON report. Encoding support does not execute source files or
+broaden the gate's limited AST analysis.
 
 ## Files
 
