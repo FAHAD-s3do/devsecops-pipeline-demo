@@ -17,7 +17,9 @@ def inspect_source(source):
         if name in ('eval','exec'):
             findings.append(dict(rule='DYNAMIC_EXECUTION',line=node.lineno))
         if name in ('run','Popen','call','check_call','check_output'):
-            if any(k.arg=='shell' and isinstance(k.value,ast.Constant) and k.value.value is True for k in node.keywords):
+            # subprocess tests shell by truth value, so constants such as 1
+            # enable it too. Never evaluate expressions or execute scanned code.
+            if any(k.arg=='shell' and isinstance(k.value,ast.Constant) and bool(k.value.value) for k in node.keywords):
                 findings.append(dict(rule='SHELL_TRUE',line=node.lineno))
     return findings
 
@@ -34,3 +36,4 @@ def main():
     print(json.dumps(dict(findings=findings,artifacts=artifacts,scope='Explicit source files only; no dependency/CVE/secret scan'),indent=2))
     return int(bool(findings))
 if __name__=='__main__':raise SystemExit(main())
+

@@ -17,7 +17,7 @@ python3 -m unittest discover -s tests -v
 ## Implemented behavior
 
 - Unit tests exercise the health endpoint and positive/negative policy cases.
-- AST gate flags direct eval/exec calls and literal shell=True calls in explicitly listed files.
+- AST gate flags direct eval/exec calls and truthy constant `shell` arguments (such as `shell=True`, `shell=1`, or a non-empty string) in explicitly listed files.
 - Gate exits nonzero on findings; JSON includes SHA-256 hashes of checked source artifacts.
 - Parses Python source bytes using Python's encoding-cookie and UTF-8 BOM rules, while hashing the original bytes. Valid non-UTF-8 source is no longer rejected before inspection.
 - CI uses read-only repository permissions, pinned action commits and a Python-version matrix.
@@ -29,12 +29,18 @@ Educational gate only: no alias/dataflow resolution, taint analysis, dependency 
 
 ## Validation
 
-9 unit tests passed locally on Python 3.12.14, including declared Latin-1 encoding, UTF-8 BOM, invalid encodings, exact-byte hashes, and CLI exit codes. Synthetic CLI examples were executed and results are included under `examples/`. No customer data, historical lab results or production effectiveness is claimed. The initial GitHub Actions tests on Python 3.10 and 3.12, static gate, and container job [passed](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/38247548910); check current Actions results for subsequent changes.
+14 unit tests passed locally on Python 3.12.14, including truthy/falsy shell constants, static-only inspection, declared Latin-1 encoding, UTF-8 BOM, invalid encodings, exact-byte hashes, and CLI exit codes. Synthetic CLI examples were executed and results are included under `examples/`. No customer data, historical lab results or production effectiveness is claimed. The initial GitHub Actions tests on Python 3.10 and 3.12, static gate, and container job [passed](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/38247548910); check current Actions results for subsequent changes.
 
 The gate exits 0 for inspected files without findings, 1 for policy findings, and
 2 for read/parse/encoding errors. Errors produce a diagnostic on stderr rather
 than a partial JSON report. Encoding support does not execute source files or
 broaden the gate's limited AST analysis.
+
+The `SHELL_TRUE` rule uses the truth value of AST constants rather than requiring
+the exact boolean `True`, matching how subprocess enables shell execution. Falsy
+constants such as `0`, `False`, and empty strings are not flagged. Variables,
+container literals, unary operators and other expressions remain outside this
+rule; no constant-expression evaluation or alias resolution is attempted.
 
 ## Files
 
@@ -51,3 +57,4 @@ Use inputs and hosts you own or are authorized to assess. Review reports before 
 ## Reference
 
 https://docs.github.com/en/actions/reference/security/secure-use
+
