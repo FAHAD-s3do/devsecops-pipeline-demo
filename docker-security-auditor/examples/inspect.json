@@ -1,0 +1,1 @@
+[{"Name":"synthetic-demo","Config":{"User":"root"},"HostConfig":{"Privileged":true,"NetworkMode":"host","ReadonlyRootfs":false,"Memory":0,"PidsLimit":0},"Mounts":[]}]
