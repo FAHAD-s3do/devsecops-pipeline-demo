@@ -4,6 +4,7 @@ import html
 import json
 from pathlib import Path
 import subprocess
+from policy import SEVERITIES, extra_checks
 
 
 def audit(containers):
@@ -22,7 +23,7 @@ def audit(containers):
         if not isinstance(name, str):
             raise ValueError('Container Name must be a string')
         def add(rule, detail):
-            findings.append(dict(container=name, rule=rule, detail=detail))
+            findings.append(dict(container=name, rule=rule, severity=SEVERITIES[rule], detail=detail, remediation=detail))
         if host.get('Privileged') is True:
             add('PRIVILEGED', 'Review privileged mode; remove broad privileges when unnecessary.')
         user = config.get('User', '')
@@ -50,16 +51,18 @@ def audit(containers):
                 raise ValueError('Mount paths must be strings')
             if source.rstrip('/').endswith('/docker.sock') or destination.rstrip('/').endswith('/docker.sock'):
                 add('DOCKER_SOCKET', 'Docker API socket mounted; read-only mount flags do not restrict API operations.')
-    return dict(containers=len(containers), findings=findings,
+        findings.extend(dict(container=name, **f) for f in extra_checks(config, host, mounts))
+    summary = {level:sum(f['severity']==level for f in findings) for level in ('critical','high','medium','low')}
+    return dict(schema_version=2, summary=summary, containers=len(containers), findings=findings,
                 scope='Configuration review only; no exploitability or compliance verdict. Environment variables and mount paths omitted.')
 
 
 def render(report):
-    rows = ''.join('<tr>' + ''.join('<td>' + html.escape(f[k]) + '</td>' for k in ('container', 'rule', 'detail')) + '</tr>' for f in report['findings'])
+    rows = ''.join('<tr>' + ''.join('<td>' + html.escape(f[k]) + '</td>' for k in ('container', 'severity', 'rule', 'detail', 'remediation')) + '</tr>' for f in report['findings'])
     return ('<!doctype html><html lang="en"><meta charset="utf-8"><title>Docker Security Review</title>'
             '<meta name="viewport" content="width=device-width"><style>body{background:#101827;color:#e5edf8;font:16px system-ui;margin:3rem}td,th{padding:1rem;border:1px solid #46546b;text-align:left}table{border-collapse:collapse}</style>'
             '<h1>Docker Security Review</h1><p>' + html.escape(report['scope']) + '</p><p>Containers: ' + str(report['containers']) + '</p>'
-            '<table><tr><th>Container</th><th>Rule</th><th>Review guidance</th></tr>' + rows + '</table></html>')
+            '<table><tr><th>Container</th><th>Severity</th><th>Rule</th><th>Evidence</th><th>Remediation</th></tr>' + rows + '</table></html>')
 
 
 def main():
@@ -69,6 +72,7 @@ def main():
     inputs.add_argument('--container', help='Explicit local container name or ID; no discovery')
     parser.add_argument('--format', choices=['json', 'html'], default='json')
     parser.add_argument('--fail-on-findings', action='store_true')
+    parser.add_argument('--fail-on', choices=['critical','high','medium','low'], help='Exit 1 when a finding meets this severity threshold')
     args = parser.parse_args()
     try:
         if args.fixture:
@@ -82,10 +86,13 @@ def main():
             data = result.stdout
         report = audit(json.loads(data))
         print(render(report) if args.format == 'html' else json.dumps(report, indent=2))
-        return int(args.fail_on_findings and bool(report['findings']))
+        levels = ['critical','high','medium','low']
+        threshold_hit = args.fail_on and any(report['summary'][level] for level in levels[:levels.index(args.fail_on)+1])
+        return int(bool(threshold_hit or (args.fail_on_findings and report['findings'])))
     except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
         parser.exit(2, f'Cannot audit: {exc}\n')
 
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
