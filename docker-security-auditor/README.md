@@ -1,50 +1,78 @@
 # Docker Security Auditor
 
-## Extended policy engine
+Read-only Docker configuration reviews with severity-ranked findings, remediation guidance, and CI thresholds.
 
-Schema version 2 reports include critical/high/medium/low severity counts and
-remediation guidance per finding. Added rules review dangerous added Linux
-capabilities, explicitly disabled seccomp/AppArmor/SELinux confinement, explicit
-no-new-privileges disablement, device mappings, sensitive host bind mounts and
-environment-variable names that suggest secrets. Secret names/values and mount
-paths are not included in findings. These are review heuristics, not exploit proof.
+![Docker Security Auditor architecture](assets/workflow.svg)
+
+**Python 3.10+ · Standard library · JSON / HTML · Explicit local inspection**
+
+## Quick start
+
+Run from this directory:
 
 ```bash
-python auditor.py --container my-container --fail-on high
+# Review a recorded fixture without Docker access
+python auditor.py --fixture examples/inspect.json
+
+# Review one explicitly named local container
+python auditor.py --container my-container
+
+# Write an HTML report; choose a new filename to preserve previous reports
+python auditor.py --container my-container --format html > report.html
+
+# Fail CI on high or critical findings
+python auditor.py --fixture examples/inspect.json --fail-on high
 ```
 
-Severity thresholds return exit 1 for findings at or above the selected level;
-collection/input errors remain exit 2. Default behavior remains report-only.
-An absent profile option does not mean confinement is disabled: daemon defaults
-and platform behavior require separate verification. Secret-name checks can miss
-secrets and produce false positives. Sensitive binds are checked against selected
-Linux paths; arbitrary socket renaming and alternate Docker data roots need manual review.
+Shell redirection can overwrite an existing report. Live mode requires Docker CLI access;
+offline mode requires only Python. Neither mode changes containers.
 
-![Docker review workflow](assets/workflow.svg)
+## Review coverage
 
-Read-only local Docker configuration reviews using Python 3.10+ and its standard library.
+| Area | Configuration signals |
+| --- | --- |
+| Privileges | Privileged mode, configured root user, sensitive added capabilities |
+| Isolation | Host network/PID namespaces, explicitly disabled security profiles |
+| Host access | Docker sockets, sensitive Linux bind mounts, mapped devices |
+| Resource controls | Memory/PID limits and writable root filesystem |
+| Secret handling | Environment-variable name heuristics; names and values omitted |
+| Delivery | JSON schema version 2, escaped HTML, severity counts, remediation |
 
-## Usage
+## CI behavior
+
+| Exit code | Meaning |
+| --- | --- |
+| 0 | Collection succeeded; configured finding threshold was not met |
+| 1 | Findings meet `--fail-on`, or findings exist with `--fail-on-findings` |
+| 2 | Invalid input or collection failure |
+
+Without a finding flag, collection success returns 0 even when findings exist.
+`--fail-on high` includes critical findings. This is a configuration review gate,
+not a security certification.
+
+## Validation
 
 ```bash
-python auditor.py --container my-container
-python auditor.py --fixture examples/inspect.json --format html > report.html
-python auditor.py --fixture examples/inspect.json --fail-on-findings
 python -m unittest discover -s tests -v
 ```
 
-Checks privileged mode, root user configuration, host networking/PID namespaces,
-writable root filesystems, memory/PID limits and Docker socket mounts. Reports
-omit environment variables, cookie-like secrets and mount paths. Container names
-can still identify internal workloads; review reports before sharing.
+The project has 17 tests covering rule boundaries, malformed input, output
+escaping, value omission, severity counts and CLI exit behavior. The dedicated
+Docker Auditor Tests workflow runs on Python 3.10 and 3.12. Live Docker collection
+was not validated locally; inspect fixture tests do not establish runtime protection.
 
-Exit 0 means collection succeeded, 1 means findings with the optional flag, and 2
-means invalid input or collection failure. HTML escapes untrusted names.
+## Interpretation and limits
 
 An empty configured user requests review; it does not prove the running process
 is root. Parent cgroups can impose limits absent from container configuration.
-Renamed sockets, indirect access, effective runtime capabilities, image vulnerabilities,
-daemon settings, effective seccomp policy and full CIS compliance are outside this tool's scope.
-Docker access itself can grant extensive host control. This CLI never modifies
-containers and only inspects an explicitly named local container.
+Absent security options do not prove that profiles are disabled: daemon defaults
+and platform behavior need verification. Secret-name checks can miss secrets
+and produce false positives.
 
+Renamed sockets, indirect access, effective runtime capabilities, image CVEs,
+daemon configuration, effective seccomp policy and full CIS compliance are outside
+scope. Sensitive binds cover selected Linux paths; alternate data roots need
+manual assessment. Docker access can grant extensive host control.
+
+Environment variables and mount paths are omitted from findings. Container names
+can still identify internal workloads; review reports before sharing.
