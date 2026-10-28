@@ -56,12 +56,17 @@ not a security certification.
 python -m unittest discover -s tests -v
 ```
 
-The project has 17 tests covering rule boundaries, malformed input, output
+The project has 22 tests covering rule boundaries, malformed input, output
 escaping, value omission, severity counts and CLI exit behavior. The dedicated
 Docker Auditor Tests workflow runs on Python 3.10 and 3.12. Live Docker collection
 was not validated locally; inspect fixture tests do not establish runtime protection.
 
 ## Interpretation and limits
+
+Input must contain at least one container. Explicit Privileged and ReadonlyRootfs
+fields must be JSON booleans; NetworkMode and PidMode must be strings. Malformed
+types return exit 2 without a report, including with severity gates enabled.
+Omitted optional fields retain the existing conservative review behavior.
 
 An empty configured user requests review; it does not prove the running process
 is root. Parent cgroups can impose limits absent from container configuration.
@@ -76,3 +81,4 @@ manual assessment. Docker access can grant extensive host control.
 
 Environment variables and mount paths are omitted from findings. Container names
 can still identify internal workloads; review reports before sharing.
+

@@ -8,8 +8,8 @@ from policy import SEVERITIES, extra_checks
 
 
 def audit(containers):
-    if not isinstance(containers, list):
-        raise ValueError('Expected a Docker inspect JSON array')
+    if not isinstance(containers, list) or not containers:
+        raise ValueError('Expected a non-empty Docker inspect JSON array')
     findings = []
     for index, container in enumerate(containers):
         if not isinstance(container, dict):
@@ -19,6 +19,12 @@ def audit(containers):
         mounts = container.get('Mounts')
         if not isinstance(config, dict) or not isinstance(host, dict) or not isinstance(mounts, list):
             raise ValueError('Each container requires Config, HostConfig and Mounts')
+        for key in ('Privileged', 'ReadonlyRootfs'):
+            if key in host and type(host[key]) is not bool:
+                raise ValueError(f'HostConfig.{key} must be a boolean')
+        for key in ('NetworkMode', 'PidMode'):
+            if key in host and not isinstance(host[key], str):
+                raise ValueError(f'HostConfig.{key} must be a string')
         name = container.get('Name', f'container-{index}')
         if not isinstance(name, str):
             raise ValueError('Container Name must be a string')
@@ -95,4 +101,5 @@ def main():
 
 if __name__ == '__main__':
     raise SystemExit(main())
+
 
