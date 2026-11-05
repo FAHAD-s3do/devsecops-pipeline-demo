@@ -1,6 +1,6 @@
 # DevSecOps Pipeline Demo
 
-[![CI](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/40623263128) · [Latest successful main-branch run](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/runs/40623263128)
+[![CI](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions) · [Workflow history](https://github.com/FAHAD-s3do/devsecops-pipeline-demo/actions)
 
 ![DevSecOps Pipeline Demo workflow](assets/workflow.svg)
 
